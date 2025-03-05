@@ -1,12 +1,21 @@
-import './index.css'; // import css
 
-import * as React from "react";
-import { createRoot } from "react-dom/client";
-import App from './App';
+import { Route, MemoryRouter as Router, Routes } from 'react-router-dom';
 
-const root = createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-   <App/>
-  </React.StrictMode>
-);
+function Homepage() {
+    return(
+        <div>
+            <h1 className="font-bold text-2xl underline text-red-700">Hello react</h1>
+            <h1>Homepage</h1>
+        </div>
+    )
+}
+
+export default function App() {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/" element={<Homepage />} />
+        </Routes>
+      </Router>
+    );
+  }
