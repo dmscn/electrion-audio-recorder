@@ -13,7 +13,9 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "paths": {
-      "*": ["node_modules/*"]
+      "*": ["node_modules/*"],
+      "Components/*": ["src/components/*"],
+      "Hooks/*": ["src/hooks/*"]
     }
   },
   "include": ["src/**/*"]
