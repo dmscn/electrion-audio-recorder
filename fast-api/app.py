@@ -4,15 +4,28 @@ import tempfile
 import requests
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import whisper
 from kokoro import KPipeline
 import soundfile as sf
 import numpy as np
 
 app = FastAPI()
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # List of allowed origins
+    allow_credentials=True,  # Allow cookies and other credentials
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
 
 # Load the Whisper model once at startup (choose model size as needed)
-whisper_model = whisper.load_model("small")  # Options: base, small, etc.
+whisper_model = whisper.load_model("base")  # Options: base, small, etc.
 
 def transcribe_audio(file_path: str) -> str:
     """Uses the Whisper model to transcribe the given audio file."""
