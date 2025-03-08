@@ -1,14 +1,25 @@
 import useAudioRecorder from 'Hooks/useAudioRecorder';
+import useProcessAudio from 'Hooks/useProcessAudio';
 import React from 'react';
 
-const AudioRecorderComponent: React.FC = () => {
-  const { recording, audioUrl, startRecording, stopRecording } = useAudioRecorder();
+const AudioRecorder: React.FC = () => {
+  const { isRecording, start, stop, getRecording } = useAudioRecorder();
+  const { processing, responseAudioUrl, error, processAudio } = useProcessAudio();
 
   const handleRecordClick = () => {
-    if (!recording) {
-      startRecording();
+    if (!isRecording) {
+      start();
     } else {
-      stopRecording();
+      stop();
+    }
+  };
+
+  const handleProcessAudio = async () => {
+    const audioBlob = getRecording();
+    if (audioBlob) {
+      await processAudio(audioBlob);
+    } else {
+      console.log("No audio recorded yet");
     }
   };
 
@@ -18,15 +29,34 @@ const AudioRecorderComponent: React.FC = () => {
         onClick={handleRecordClick}
         className="px-6 py-3 bg-blue-500 text-white rounded-full hover:bg-blue-600"
       >
-        {recording ? 'Stop Recording' : 'Start Recording'}
+        {isRecording ? 'Stop Recording' : 'Start Recording'}
       </button>
-      {audioUrl && (
+      {getRecording() && (
+        <>
+        <p>Your recorded audio</p>
         <div className="mt-4">
-          <audio controls src={audioUrl} />
+          <audio controls src={URL.createObjectURL(getRecording())} />
         </div>
+        <button
+          onClick={handleProcessAudio}
+          className="px-6 py-3 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+        >
+          Process response
+        </button>
+        </>
       )}
-    </div>
+      {processing && <p>Processing...</p>}
+      {error && <p>Error: {error}</p>}
+      {responseAudioUrl && (
+        <>
+          <p>Response:</p>
+          <div className="mt-4">
+            <audio controls src={responseAudioUrl} />
+          </div>
+       </>
+      )}
+      </div>
   );
 };
 
-export default AudioRecorderComponent;
+export default AudioRecorder;

@@ -1,70 +1,85 @@
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from "react";
 
-interface AudioRecorder {
-  recording: boolean;
-  audioBlob: Blob | null;
-  audioUrl: string | null;
-  startRecording: () => Promise<void>;
-  stopRecording: () => void;
-}
+type AudioRecorderReturn = {
+  isRecording: boolean;
+  start: () => Promise<void>;
+  stop: () => void;
+  getRecording: () => Blob | null;
+};
 
-const useAudioRecorder = (): AudioRecorder => {
-  const [recording, setRecording] = useState<boolean>(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+export default function useAudioRecorder(): AudioRecorderReturn {
+  const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const audioBlobRef = useRef<Blob | null>(null);
 
-  const startRecording = useCallback(async () => {
+  // List available microphone devices
+  const getAvailableMicrophones = async (): Promise<MediaDeviceInfo[]> => {
     try {
-      // Request access to the microphone
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          noiseSuppression: true,
-          echoCancellation: true
-        },
-      });
-      // Create a MediaRecorder instance
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const microphones = devices.filter((device) => device.kind === "audioinput");
 
-      // Gather recorded audio data
-      mediaRecorder.addEventListener('dataavailable', event => {
+      console.log("Available microphones:", microphones.map((mic) => mic.label || "Unknown Microphone"));
+
+      if (microphones.length === 0) {
+        console.error("No microphone devices found.");
+        return [];
+      }
+      return microphones;
+    } catch (error) {
+      console.error("Error listing microphone devices:", error);
+      return [];
+    }
+  };
+
+  const start = async () => {
+    if (isRecording) {
+      console.warn("Recording is already in progress.");
+      return;
+    }
+
+    const microphones = await getAvailableMicrophones();
+    if (microphones.length === 0) {
+      console.error("Cannot start recording: No microphones available.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
-      });
+      };
 
-      // When recording stops, create a Blob and generate a URL
-      mediaRecorder.addEventListener('stop', () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(blob);
-        setAudioUrl(URL.createObjectURL(blob));
-      });
+      mediaRecorder.onstop = () => {
+        audioBlobRef.current = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        audioChunksRef.current = []; // Reset for next recording
+      };
 
-      // Start recording
       mediaRecorder.start();
-      setRecording(true);
+      mediaRecorderRef.current = mediaRecorder;
+      setIsRecording(true);
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.error("Error starting audio recording:", error);
     }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && recording) {
-      mediaRecorderRef.current.stop();
-      setRecording(false);
-    }
-  }, [recording]);
-
-  return {
-    recording,
-    audioBlob,
-    audioUrl,
-    startRecording,
-    stopRecording,
   };
-};
 
-export default useAudioRecorder;
+  const stop = () => {
+    if (!isRecording || !mediaRecorderRef.current) {
+      console.warn("No active recording to stop.");
+      return;
+    }
+
+    mediaRecorderRef.current.stop();
+    mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop()); // Release microphone
+    mediaRecorderRef.current = null;
+    setIsRecording(false);
+  };
+
+  const getRecording = () => audioBlobRef.current;
+
+  return { isRecording, start, stop, getRecording };
+}

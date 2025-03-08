@@ -5,8 +5,6 @@ import { Route, MemoryRouter as Router, Routes } from 'react-router-dom';
 function Homepage() {
     return(
         <div>
-            <h1 className="font-bold text-2xl underline text-red-700">Hello react</h1>
-            <h1>Homepage</h1>
             <AudioRecorder />
         </div>
     )
